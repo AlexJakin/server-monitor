@@ -1,6 +1,6 @@
 # Server Monitor
 
-VS Code / Trae CN 双端通用的资源监控插件：一份 TypeScript 源码打成一个 `.vsix`，界面是内置 Webview 仪表盘（CPU / 内存 / GPU 显存与利用率 / 磁盘 / 网络 / 每卡运行进程 / 服务器配置详情）。CSS/JS 全内联、零 CDN、明暗主题自适应，离线可用。
+Server Monitor 是 VS Code / Trae CN 上的服务器资源监控插件：把 CPU、内存、GPU 显存与每张显卡上运行的进程、磁盘、网络和服务器配置详情集中到一张实时仪表盘里，不用再开终端反复敲 `top`、`nvidia-smi`、`df`。界面是内置 Webview，CSS/JS 全内联、零 CDN、明暗主题自适应、离线可用；一份 TypeScript 源码打成一个 `.vsix`，两端都能装。数据来自本机还是远程服务器，见下表。
 
 | 数据源 | 读到的是谁 |
 | --- | --- |
