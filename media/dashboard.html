@@ -1,0 +1,720 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- __CSP_META__ -->
+<title>Server Monitor</title>
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+:root {
+  --bg: #0b101c; --surface: #141c2d; --surface-2: #1b2539;
+  --line: rgba(255,255,255,.075); --text: #e9eef9; --muted: #8b97b4; --dim: #5f6b86;
+  --accent: #6c8cff; --teal: #35d3ac; --amber: #f4b45e; --purple: #a98bff; --pink: #ef7fa8;
+  --shadow: 0 10px 30px rgba(0,0,0,.24); --radius: 16px;
+}
+body.vscode-light {
+  --bg: #f4f7fc; --surface: #ffffff; --surface-2: #eef2fa;
+  --line: rgba(18,30,55,.09); --text: #182238; --muted: #66738f; --dim: #94a0b6;
+  --shadow: 0 8px 24px rgba(24,40,75,.07);
+}
+body {
+  background: radial-gradient(900px 420px at 6% -10%, rgba(108,140,255,.14), transparent 70%), var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 13px; line-height: 1.55; padding: 20px 22px 28px;
+  -webkit-font-smoothing: antialiased;
+}
+.app { max-width: 1280px; margin: 0 auto; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-mark { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: linear-gradient(135deg, #6c8cff, #a98bff); box-shadow: 0 6px 18px rgba(108,140,255,.32); }
+h1 { font-size: 17px; font-weight: 600; margin: 0; letter-spacing: .2px; }
+.sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.sep { opacity: .5; margin: 0 4px; }
+.pill { display: inline-block; padding: 0 7px; border-radius: 6px; font-size: 11px; background: var(--surface-2); color: var(--muted); }
+.pill.src-live { background: rgba(53,211,172,.14); color: var(--teal); font-weight: 600; }
+.pill.src-ssh { background: rgba(108,140,255,.16); color: var(--accent); font-weight: 600; }
+.pill.src-demo { background: rgba(244,180,94,.16); color: var(--amber); font-weight: 600; }
+.demo-banner, .err-banner { display: none; margin: -6px 0 16px; padding: 9px 14px; border-radius: 10px; font-size: 12px; }
+.demo-banner { border: 1px solid rgba(244,180,94,.32); background: rgba(244,180,94,.09); color: var(--amber); }
+.err-banner { border: 1px solid rgba(239,127,168,.34); background: rgba(239,127,168,.10); color: var(--pink); }
+.demo-banner.show, .err-banner.show { display: block; }
+.demo-banner strong, .err-banner strong { font-weight: 600; }
+.info-card { padding: 16px 18px; margin-bottom: 14px; }
+.info-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.info-item { background: var(--surface-2); border-radius: 10px; padding: 9px 11px; min-width: 0; }
+.info-key { display: block; font-size: 10.5px; color: var(--muted); margin-bottom: 3px; }
+.info-val { display: block; font: 500 12px ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.info-val.ok { color: var(--teal); }
+.info-val.bad { color: var(--pink); }
+.info-span2 { grid-column: span 2; }
+.empty { display: block; padding: 14px 4px; color: var(--dim); font-size: 12px; }
+.actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.live { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 12px; color: var(--muted); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 3px rgba(53,211,172,.16); animation: pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .42; transform: scale(.8); } }
+button, select { font: inherit; font-size: 12px; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 7px 12px; cursor: pointer; transition: border-color .18s, transform .18s, background .18s; }
+button { display: inline-flex; align-items: center; gap: 6px; }
+button:hover, select:hover { border-color: var(--accent); transform: translateY(-1px); }
+button:active { transform: translateY(0); }
+select { padding-right: 8px; }
+.hero-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
+.metric { padding: 16px 18px 14px; position: relative; overflow: hidden; transition: transform .2s, border-color .2s; }
+.metric:hover { transform: translateY(-2px); border-color: var(--c); }
+.metric::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--c); opacity: .8; }
+.mc-head { display: flex; align-items: center; gap: 8px; }
+.mc-icon { width: 24px; height: 24px; border-radius: 7px; background: var(--c-soft); color: var(--c); display: grid; place-items: center; }
+.mc-label { font-size: 12px; font-weight: 500; color: var(--muted); }
+.mc-badge { margin-left: auto; font-size: 10.5px; color: var(--dim); border: 1px solid var(--line); padding: 1px 7px; border-radius: 6px; }
+.mc-value { font: 600 30px/1.1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: -1px; margin: 14px 0 2px; font-variant-numeric: tabular-nums; }
+.mc-value small { font-size: 13px; font-weight: 400; color: var(--muted); margin-left: 4px; letter-spacing: 0; }
+.mc-meta { font-size: 11.5px; color: var(--muted); min-height: 18px; }
+.bar { height: 6px; border-radius: 99px; background: var(--surface-2); overflow: hidden; margin-top: 12px; }
+.bar > i { display: block; height: 100%; border-radius: 99px; background: var(--c); transition: width .55s cubic-bezier(.2,.8,.2,1); }
+.mc-foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; margin-top: 8px; }
+.mc-foot > span { font-size: 10.5px; color: var(--dim); }
+.spark { width: 96px; height: 26px; flex: none; }
+.spark .ar { fill: var(--c); opacity: .12; }
+.spark .ln { fill: none; stroke: var(--c); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.chart-card, .gpu-card, .gpuproc-card, .io-card, .proc-card { padding: 16px 18px; margin-bottom: 14px; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.card-head h2 { font-size: 13.5px; font-weight: 600; margin: 0; }
+.hint { font-size: 11px; color: var(--dim); }
+.legend { display: flex; gap: 14px; font-size: 11.5px; color: var(--muted); }
+.legend i { display: inline-block; width: 9px; height: 3px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+#trendChart { width: 100%; height: 190px; display: block; }
+.trend-grid { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.trend-axis { fill: var(--dim); font-size: 10px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.trend-line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.line-cpu { stroke: var(--accent); }
+.line-mem { stroke: var(--purple); stroke-width: 1.7; }
+.line-gpu { stroke: var(--teal); stroke-width: 1.7; }
+.area-cpu { fill: var(--accent); opacity: .10; }
+.dot-cpu { fill: var(--accent); }
+.dot-mem { fill: var(--purple); }
+.dot-gpu { fill: var(--teal); }
+.chart-axis { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--dim); padding: 0 2px 0 36px; }
+.gpu-row { display: grid; grid-template-columns: 58px minmax(130px, 1.1fr) minmax(190px, 1.6fr) 108px 62px; gap: 14px; align-items: center; padding: 11px 0; border-top: 1px solid var(--line); }
+.gpu-row:first-child { border-top: 0; }
+.gpu-id { font: 600 12px ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--c); }
+.gpu-name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gpu-mem { display: flex; align-items: center; gap: 10px; }
+.gpu-mem .bar { flex: 1; margin: 0; height: 7px; }
+.gpu-mem span { font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--muted); white-space: nowrap; min-width: 106px; text-align: right; font-variant-numeric: tabular-nums; }
+.gpu-util { font-size: 11.5px; color: var(--muted); }
+.gpu-util b { color: var(--text); font: 600 13px ui-monospace, SFMono-Regular, Consolas, monospace; }
+.gpu-temp { font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--amber); text-align: right; }
+/* 每张显卡的运行进程 */
+.gpuproc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 12px; }
+.gpc { background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 13px 10px; position: relative; overflow: hidden; min-width: 0; }
+.gpc::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--c); opacity: .85; }
+.gpc-head { display: flex; align-items: center; gap: 8px; }
+.gpc-id { font: 600 12px ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--c); white-space: nowrap; }
+.gpc-model { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.gpc-badge { font-size: 10.5px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px; white-space: nowrap; }
+.gpc-meta { display: flex; justify-content: space-between; gap: 8px; font: 10.5px ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--dim); margin: 9px 0 6px; }
+.gpc-bar { height: 5px; margin: 0 0 10px; }
+.gpc table { font-size: 11.5px; }
+.gpc th { font-size: 10px; padding: 4px 3px; }
+.gpc td { padding: 5px 3px; }
+.gpc td.name { max-width: 120px; }
+.gpc .mini-bar { width: 30px; margin-right: 5px; }
+.gpc .mini-bar i { background: var(--c); }
+.kind-tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 5px; white-space: nowrap; }
+.k-compute { color: var(--teal); background: rgba(53,211,172,.12); }
+.k-graphics { color: var(--purple); background: rgba(169,139,255,.13); }
+.k-both { color: var(--amber); background: rgba(244,180,94,.13); }
+.gpc-foot { margin-top: 8px; font-size: 10.5px; color: var(--dim); }
+.gpc-empty { display: block; padding: 12px 2px 6px; font-size: 11.5px; color: var(--dim); }
+.proc-tools { display: flex; align-items: center; gap: 8px; }
+.proc-tools select { padding: 4px 8px; font-size: 11px; border-radius: 7px; }
+.bottom-grid { display: grid; grid-template-columns: 1fr 1.35fr; gap: 14px; }
+.io-block + .io-block { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.io-label { font-size: 11px; color: var(--dim); }
+.io-value { font: 600 20px ui-monospace, SFMono-Regular, Consolas, monospace; margin: 4px 0 8px; font-variant-numeric: tabular-nums; }
+.io-row { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 8px; align-items: center; margin-top: 12px; font-size: 11.5px; color: var(--muted); }
+.io-row b { font: 600 12px ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--text); }
+.io-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+.io-pair > div { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+.io-tag { display: block; font-size: 10.5px; color: var(--muted); margin-bottom: 4px; }
+.io-tag.down { color: var(--teal); }
+.io-tag.up { color: var(--amber); }
+.io-pair b { font: 600 16px ui-monospace, SFMono-Regular, Consolas, monospace; font-variant-numeric: tabular-nums; }
+.io-pair small { font-size: 10.5px; color: var(--dim); margin-left: 3px; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { text-align: left; color: var(--dim); font-weight: 500; font-size: 10.5px; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+td { padding: 7px 4px; border-bottom: 1px solid var(--line); color: var(--muted); }
+tbody tr:last-child td { border-bottom: 0; }
+th.num, td.num { text-align: right; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-variant-numeric: tabular-nums; }
+td.name { color: var(--text); max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini-bar { display: inline-block; width: 42px; height: 4px; border-radius: 99px; background: var(--surface-2); vertical-align: middle; margin-right: 7px; overflow: hidden; }
+.mini-bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+footer { margin-top: 16px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 11px; color: var(--dim); }
+footer b { font-weight: 500; color: var(--muted); }
+@media (max-width: 1000px) { .hero-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .bottom-grid { grid-template-columns: 1fr; } .info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .hero-grid, .info-grid, .gpuproc-grid { grid-template-columns: 1fr; } .info-span2 { grid-column: span 1; } .gpu-row { grid-template-columns: 52px 1fr; gap: 6px 12px; } .gpu-mem { grid-column: 1 / -1; } .gpu-util, .gpu-temp { text-align: left; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 15h4l3-8 4 12 3-7 2 3h4"/></svg>
+      </div>
+      <div>
+        <h1>Server Monitor</h1>
+        <div class="sub"><span id="hostName">gpu-01</span><span class="sep">·</span><span id="sourceLabel" class="pill src-demo">演示数据</span></div>
+      </div>
+    </div>
+    <div class="actions">
+      <div class="live"><i class="dot" id="liveDot"></i><span id="liveLabel">实时</span></div>
+      <select id="interval" aria-label="刷新间隔">
+        <option value="1000">1 秒</option>
+        <option value="2000" selected>2 秒</option>
+        <option value="5000">5 秒</option>
+        <option value="10000">10 秒</option>
+      </select>
+      <button id="sourceBtn" title="切换数据源">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5h9l-2-2M14 11H5l2 2"/></svg>
+        <span id="sourceBtnText">数据源</span>
+      </button>
+      <button id="pauseBtn" title="暂停或继续刷新">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="2" y="1.5" width="3" height="9" rx="1"/><rect x="7" y="1.5" width="3" height="9" rx="1"/></svg>
+        <span id="pauseText">暂停</span>
+      </button>
+      <button id="refreshBtn" title="立即刷新">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path d="M13.5 2v3h-3"/></svg>
+        刷新
+      </button>
+    </div>
+  </header>
+
+  <div class="demo-banner" id="demoBanner">当前显示的是 <strong>模拟生成的演示数据</strong>，不是真实读数。点击右上角「数据源」切换到本机实测或 SSH 远程服务器。</div>
+  <div class="err-banner" id="errBanner"><strong>SSH 采集异常：</strong><span id="errText"></span></div>
+
+  <section class="hero-grid">
+    <article class="card metric" style="--c:var(--accent);--c-soft:rgba(108,140,255,.14)">
+      <div class="mc-head">
+        <span class="mc-icon"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><rect x="3" y="3" width="10" height="10" rx="2"/><path d="M6 1v2M10 1v2M6 13v2M10 13v2M1 6h2M1 10h2M13 6h2M13 10h2"/></svg></span>
+        <span class="mc-label">CPU 使用率</span><span class="mc-badge" id="cpuBadge">8 核</span>
+      </div>
+      <div class="mc-value" id="cpuValue">--<small>%</small></div>
+      <div class="mc-meta" id="cpuMeta">等待数据…</div>
+      <div class="bar"><i id="cpuBar" style="width:0%"></i></div>
+      <div class="mc-foot"><span>0 – 100%</span><svg class="spark" id="cpuSpark" viewBox="0 0 96 26" preserveAspectRatio="none"></svg></div>
+    </article>
+
+    <article class="card metric" style="--c:var(--purple);--c-soft:rgba(169,139,255,.14)">
+      <div class="mc-head">
+        <span class="mc-icon"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><rect x="2" y="4" width="12" height="8" rx="1.5"/><path d="M5 12v2M8 12v2M11 12v2M5 7h2M9 7h2"/></svg></span>
+        <span class="mc-label">内存</span><span class="mc-badge" id="memBadge">256 GB</span>
+      </div>
+      <div class="mc-value" id="memValue">--<small>GB</small></div>
+      <div class="mc-meta" id="memMeta">等待数据…</div>
+      <div class="bar"><i id="memBar" style="width:0%"></i></div>
+      <div class="mc-foot"><span>已用 / 总量</span><svg class="spark" id="memSpark" viewBox="0 0 96 26" preserveAspectRatio="none"></svg></div>
+    </article>
+
+    <article class="card metric" style="--c:var(--teal);--c-soft:rgba(53,211,172,.14)">
+      <div class="mc-head">
+        <span class="mc-icon"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><rect x="1" y="3" width="14" height="10" rx="2"/><circle cx="8" cy="8" r="2.4"/><path d="M4 13v2M12 13v2"/></svg></span>
+        <span class="mc-label">GPU 显存</span><span class="mc-badge" id="gpuMemBadge">2 卡</span>
+      </div>
+      <div class="mc-value" id="gpuMemValue">--<small>GB</small></div>
+      <div class="mc-meta" id="gpuMemMeta">等待数据…</div>
+      <div class="bar"><i id="gpuMemBar" style="width:0%"></i></div>
+      <div class="mc-foot"><span>显存占用</span><svg class="spark" id="gpuMemSpark" viewBox="0 0 96 26" preserveAspectRatio="none"></svg></div>
+    </article>
+
+    <article class="card metric" style="--c:var(--amber);--c-soft:rgba(244,180,94,.14)">
+      <div class="mc-head">
+        <span class="mc-icon"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12l4-5 3 3 5-7"/><path d="M11 3h3v3"/></svg></span>
+        <span class="mc-label">GPU 利用率</span><span class="mc-badge" id="gpuUtilBadge">平均</span>
+      </div>
+      <div class="mc-value" id="gpuUtilValue">--<small>%</small></div>
+      <div class="mc-meta" id="gpuUtilMeta">等待数据…</div>
+      <div class="bar"><i id="gpuUtilBar" style="width:0%"></i></div>
+      <div class="mc-foot"><span>0 – 100%</span><svg class="spark" id="gpuUtilSpark" viewBox="0 0 96 26" preserveAspectRatio="none"></svg></div>
+    </article>
+  </section>
+
+  <section class="card info-card">
+    <div class="card-head">
+      <h2>服务器配置详情</h2>
+      <span class="hint" id="cfgRemote">等待数据…</span>
+    </div>
+    <div class="info-grid">
+      <div class="info-item info-span2"><span class="info-key">连接目标</span><span class="info-val" id="cfgTarget">—</span></div>
+      <div class="info-item"><span class="info-key">主机名</span><span class="info-val" id="cfgHostname">—</span></div>
+      <div class="info-item"><span class="info-key">运行时长</span><span class="info-val" id="cfgUptime">—</span></div>
+      <div class="info-item info-span2"><span class="info-key">操作系统</span><span class="info-val" id="cfgOs">—</span></div>
+      <div class="info-item"><span class="info-key">内核</span><span class="info-val" id="cfgKernel">—</span></div>
+      <div class="info-item"><span class="info-key">架构</span><span class="info-val" id="cfgArch">—</span></div>
+      <div class="info-item info-span2"><span class="info-key">CPU 型号</span><span class="info-val" id="cfgCpu">—</span></div>
+      <div class="info-item"><span class="info-key">逻辑核数</span><span class="info-val" id="cfgCores">—</span></div>
+      <div class="info-item"><span class="info-key">内存容量</span><span class="info-val" id="cfgMemory">—</span></div>
+      <div class="info-item"><span class="info-key">系统盘容量</span><span class="info-val" id="cfgDisk">—</span></div>
+      <div class="info-item info-span2"><span class="info-key">GPU</span><span class="info-val" id="cfgGpu">—</span></div>
+      <div class="info-item"><span class="info-key">采集状态</span><span class="info-val" id="cfgStatus">—</span></div>
+    </div>
+  </section>
+
+  <section class="card chart-card">
+    <div class="card-head">
+      <h2>资源趋势</h2>
+      <div class="legend">
+        <span><i style="background:var(--accent)"></i>CPU</span>
+        <span><i style="background:var(--purple)"></i>内存</span>
+        <span><i style="background:var(--teal)"></i>显存</span>
+      </div>
+    </div>
+    <svg id="trendChart" viewBox="0 0 720 190" preserveAspectRatio="none"></svg>
+    <div class="chart-axis"><span>较早</span><span>历史采样</span><span>现在</span></div>
+  </section>
+
+  <section class="card gpu-card">
+    <div class="card-head"><h2>GPU 明细</h2><span class="hint" id="gpuCount">--</span></div>
+    <div id="gpuList"></div>
+  </section>
+
+  <section class="card gpuproc-card">
+    <div class="card-head">
+      <h2>每张显卡的运行进程</h2>
+      <span class="hint" id="gpuProcSummary">--</span>
+    </div>
+    <div class="gpuproc-grid" id="gpuProcList"></div>
+  </section>
+
+  <section class="bottom-grid">
+    <article class="card io-card" style="--c:var(--amber)">
+      <div class="card-head"><h2>存储与网络</h2><span class="hint">实时吞吐</span></div>
+      <div class="io-block">
+        <div class="io-label">磁盘占用</div>
+        <div class="io-value" id="diskValue">--</div>
+        <div class="bar"><i id="diskBar" style="width:0%"></i></div>
+        <div class="io-row"><span>读取</span><b id="diskRead">--</b><span>写入</span><b id="diskWrite">--</b></div>
+      </div>
+      <div class="io-block">
+        <div class="io-label">网络吞吐</div>
+        <div class="io-pair">
+          <div><span class="io-tag down">↓ 下行</span><b id="netRx">--</b><small>MB/s</small></div>
+          <div><span class="io-tag up">↑ 上行</span><b id="netTx">--</b><small>MB/s</small></div>
+        </div>
+      </div>
+    </article>
+
+    <article class="card proc-card">
+      <div class="card-head">
+        <h2>进程资源占用</h2>
+        <div class="proc-tools">
+          <select id="procSort" aria-label="进程排序">
+            <option value="cpu">按 CPU 排序</option>
+            <option value="gpu">按显存排序</option>
+          </select>
+          <span class="hint" id="procCount">Top 6</span>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>进程</th><th class="num">PID</th><th>GPU</th><th class="num">CPU</th><th class="num">内存</th><th class="num">显存</th></tr></thead>
+        <tbody id="procBody"></tbody>
+      </table>
+    </article>
+  </section>
+
+  <footer>
+    <span>最近更新 <b id="updatedAt">--:--:--</b> · 采样间隔 <b id="intervalLabel">2s</b> · 运行 <b id="uptime">--</b></span>
+    <span id="footerNote">演示数据 · 仅用于界面预览，非真实读数</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  const api = typeof acquireVsCodeApi === 'function' ? acquireVsCodeApi() : null;
+  const $ = (id) => document.getElementById(id);
+  const fmt = (n, d) => Number(n || 0).toFixed(d === undefined ? 1 : d);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const post = (msg) => { if (api) { api.postMessage(msg); } };
+
+  let paused = false;
+  let intervalMs = 2000;
+  let procSortKey = 'cpu';
+  let lastProcList = [];
+  let demoTimer = null;
+  let demoHistory = [];
+  const demo = { t: 0, cpu: 42, mem: 54, gpuMem: 61, gpuUtil: 74, temp: 63 };
+
+  function advanceDemo() {
+    const d = demo;
+    d.t += 1;
+    const wave = Math.sin(d.t / 8) * 7 + Math.sin(d.t / 21) * 4;
+    d.cpu = clamp(d.cpu + (42 + wave - d.cpu) * 0.18 + (Math.random() - 0.5) * 5, 3, 97);
+    d.mem = clamp(d.mem + (55 - d.mem) * 0.05 + (Math.random() - 0.5) * 1.2, 20, 92);
+    if (Math.random() < 0.05) { d.gpuMem += (Math.random() - 0.5) * 22; }
+    d.gpuMem = clamp(d.gpuMem + (62 - d.gpuMem) * 0.05 + (Math.random() - 0.5) * 2, 12, 95);
+    d.gpuUtil = clamp(d.gpuUtil + (72 + Math.sin(d.t / 6) * 12 - d.gpuUtil) * 0.2 + (Math.random() - 0.5) * 7, 2, 99);
+    d.temp = clamp(d.temp + (58 + d.gpuUtil * 0.12 - d.temp) * 0.1 + (Math.random() - 0.5) * 1.5, 32, 89);
+  }
+
+  function demoPayload() {
+    advanceDemo();
+    const d = demo;
+    demoHistory.push({ t: Date.now(), cpu: d.cpu, memory: d.mem, gpuMemory: d.gpuMem, gpuUtil: d.gpuUtil });
+    if (demoHistory.length > 60) { demoHistory = demoHistory.slice(-60); }
+
+    const memTotalMb = 262144;
+    const gpus = [
+      { index: 0, name: 'NVIDIA A100 80GB PCIe', memoryUsedMb: 81920 * d.gpuMem / 100, memoryTotalMb: 81920, utilization: d.gpuUtil, temperatureC: d.temp },
+      { index: 1, name: 'NVIDIA RTX 4090', memoryUsedMb: 24564 * clamp(d.gpuMem - 18 + Math.sin(d.t / 13) * 8, 5, 98) / 100, memoryTotalMb: 24564, utilization: clamp(d.gpuUtil - 22, 0, 99), temperatureC: clamp(d.temp - 9, 30, 85) }
+    ];
+    const names = ['python train.py', 'torch_worker / 0', 'torch_worker / 1', 'jupyter-lab', 'dockerd', 'node server.js'];
+    const processes = names.map((name, i) => ({
+      pid: 12000 + i * 137, name: name,
+      cpu: clamp(d.cpu * (0.42 - i * 0.06) + (Math.random() - 0.5) * 6, 0.2, 99),
+      memoryMb: Math.round(2048 + (5 - i) * 940 + (Math.random() - 0.5) * 300),
+      gpuMemoryMb: i < 2 ? Math.round(gpus[0].memoryUsedMb * (i === 0 ? 0.52 : 0.28)) : 0,
+      gpuIndex: i < 2 ? 0 : (i === 3 ? 1 : undefined)
+    }));
+    const gpuProcesses = [
+      { gpuIndex: 0, pid: 12000, name: 'python train.py', fullName: '/home/ubuntu/train.py', kind: 'compute', usedMemoryMb: gpus[0].memoryUsedMb * 0.52, memoryKnown: true },
+      { gpuIndex: 0, pid: 12137, name: 'torch_worker / 0', fullName: '/opt/venv/bin/python', kind: 'compute', usedMemoryMb: gpus[0].memoryUsedMb * 0.28, memoryKnown: true },
+      { gpuIndex: 0, pid: 12274, name: 'torch_worker / 1', fullName: '/opt/venv/bin/python', kind: 'compute', usedMemoryMb: gpus[0].memoryUsedMb * 0.11, memoryKnown: true },
+      { gpuIndex: 1, pid: 12411, name: 'blender', fullName: '/usr/bin/blender', kind: 'both', usedMemoryMb: gpus[1].memoryUsedMb * 0.46, memoryKnown: true },
+      { gpuIndex: 1, pid: 12548, name: 'Xorg', fullName: '/usr/lib/xorg/Xorg', kind: 'graphics', usedMemoryMb: gpus[1].memoryUsedMb * 0.17, memoryKnown: true }
+    ];
+
+    return {
+      snapshot: {
+        timestamp: Date.now(), host: 'gpu-01', cpu: d.cpu,
+        cpuPerCore: [d.cpu, d.cpu * 0.7, d.cpu * 1.1, d.cpu * 0.4, d.cpu * 0.9, d.cpu * 0.6, d.cpu * 1.2, d.cpu * 0.5],
+        memoryUsedMb: memTotalMb * d.mem / 100, memoryTotalMb: memTotalMb,
+        diskUsedGb: 812 + Math.sin(d.t / 30) * 6, diskTotalGb: 2048,
+        diskReadMbps: 40 + Math.random() * 60, diskWriteMbps: 18 + Math.random() * 40,
+        netRxMbps: 120 + Math.random() * 180, netTxMbps: 30 + Math.random() * 90,
+        gpus: gpus, processes: processes, gpuProcesses: gpuProcesses, uptimeSeconds: 1036800 + d.t * 2
+      },
+      history: demoHistory.slice(), host: 'gpu-01', intervalMs: intervalMs, dataSource: 'demo', paused: paused,
+      serverInfo: {
+        source: 'demo', hostname: 'gpu-01', os: 'Ubuntu 22.04.4 LTS（示例）',
+        kernel: '5.15.0-generic（示例）', arch: 'x86_64', cpuModel: 'AMD EPYC 7763（示例）',
+        cores: 8, uptimeSeconds: 1036800 + d.t * 2,
+        status: '演示配置 · 非真实机器'
+      }
+    };
+  }
+
+  function sparkline(el, values) {
+    if (!el) { return; }
+    const w = 96, h = 26, n = values.length;
+    if (n < 2) { el.innerHTML = ''; return; }
+    const pts = values.map((v, i) => [i * w / (n - 1), h - 2 - (clamp(v, 0, 100) / 100) * (h - 4)]);
+    const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+    el.innerHTML = '<path class="ar" d="' + line + ' L' + w + ',' + h + ' L0,' + h + ' Z"/><path class="ln" d="' + line + '"/>';
+  }
+
+  function drawTrend(history) {
+    const svg = $('trendChart');
+    const w = 720, h = 190, padL = 36, padR = 10, padT = 10, padB = 14;
+    const iw = w - padL - padR, ih = h - padT - padB;
+    const pts = history && history.length ? history : [{ cpu: 0, memory: 0, gpuMemory: 0 }];
+    let out = '';
+
+    [0, 25, 50, 75, 100].forEach(function (v) {
+      const y = padT + ih * (1 - v / 100);
+      out += '<line class="trend-grid" x1="' + padL + '" y1="' + y + '" x2="' + (w - padR) + '" y2="' + y + '"/>';
+      out += '<text class="trend-axis" x="' + (padL - 8) + '" y="' + (y + 3) + '" text-anchor="end">' + v + '</text>';
+    });
+
+    function pathFor(key) {
+      if (pts.length < 2) { return ''; }
+      return pts.map(function (p, i) {
+        const x = padL + i * iw / (pts.length - 1);
+        const y = padT + ih * (1 - clamp(p[key], 0, 100) / 100);
+        return (i ? 'L' : 'M') + x.toFixed(1) + ',' + y.toFixed(1);
+      }).join(' ');
+    }
+
+    const cpuPath = pathFor('cpu');
+    if (cpuPath) {
+      out += '<path class="area-cpu" d="' + cpuPath + ' L' + (padL + iw) + ',' + (padT + ih) + ' L' + padL + ',' + (padT + ih) + ' Z"/>';
+    }
+    const series = [
+      { key: 'cpu', cls: 'line-cpu', dot: 'dot-cpu' },
+      { key: 'memory', cls: 'line-mem', dot: 'dot-mem' },
+      { key: 'gpuMemory', cls: 'line-gpu', dot: 'dot-gpu' }
+    ];
+    series.forEach(function (s) {
+      const p = pathFor(s.key);
+      if (p) { out += '<path class="trend-line ' + s.cls + '" d="' + p + '"/>'; }
+      const last = pts[pts.length - 1];
+      const y = padT + ih * (1 - clamp(last[s.key], 0, 100) / 100);
+      out += '<circle class="' + s.dot + '" cx="' + (padL + iw) + '" cy="' + y.toFixed(1) + '" r="3.2"/>';
+    });
+    svg.innerHTML = out;
+  }
+
+  function setCard(prefix, value, unit, meta, pct, spark) {
+    $(prefix + 'Value').innerHTML = value + '<small>' + unit + '</small>';
+    $(prefix + 'Meta').textContent = meta;
+    $(prefix + 'Bar').style.width = fmt(clamp(pct, 0, 100), 1) + '%';
+    sparkline($(prefix + 'Spark'), spark);
+  }
+
+  function drawGpus(gpus) {
+    $('gpuCount').textContent = gpus.length + ' 张卡';
+    if (!gpus.length) {
+      $('gpuList').innerHTML = '<span class="empty">未检测到 NVIDIA GPU（或 nvidia-smi 不可用）。CPU、内存、磁盘与进程仍为真实读数。</span>';
+      return;
+    }
+    $('gpuList').innerHTML = gpus.map(function (g) {
+      const pct = g.memoryTotalMb ? g.memoryUsedMb / g.memoryTotalMb * 100 : 0;
+      const color = g.index % 2 === 0 ? 'var(--teal)' : 'var(--purple)';
+      return '<div class="gpu-row" style="--c:' + color + '">' +
+        '<div class="gpu-id">GPU ' + g.index + '</div>' +
+        '<div class="gpu-name" title="' + esc(g.name) + '">' + esc(g.name) + '</div>' +
+        '<div class="gpu-mem"><div class="bar"><i style="width:' + fmt(clamp(pct, 0, 100), 1) + '%"></i></div>' +
+        '<span>' + fmt(g.memoryUsedMb / 1024, 1) + ' / ' + fmt(g.memoryTotalMb / 1024, 1) + ' GB</span></div>' +
+        '<div class="gpu-util">利用率 <b>' + fmt(g.utilization, 0) + '%</b></div>' +
+        '<div class="gpu-temp">' + fmt(g.temperatureC, 0) + '°C</div></div>';
+    }).join('');
+  }
+
+  function kindTag(kind) {
+    const tags = { compute: ['计算', 'k-compute'], graphics: ['图形', 'k-graphics'], both: ['计算+图形', 'k-both'] };
+    const item = tags[kind] || ['未知', 'k-compute'];
+    return '<span class="kind-tag ' + item[1] + '">' + item[0] + '</span>';
+  }
+
+  /** 按物理显卡分组展示进程；显存不可用（Windows WDDM）时如实显示「—」。 */
+  function drawGpuProcesses(gpus, apps) {
+    const list = apps || [];
+    $('gpuProcSummary').textContent = gpus.length + ' 张卡 · ' + list.length + ' 个 GPU 进程';
+    const byGpu = new Map();
+    list.forEach(function (a) {
+      const key = typeof a.gpuIndex === 'number' ? a.gpuIndex : -1;
+      if (!byGpu.has(key)) { byGpu.set(key, []); }
+      byGpu.get(key).push(a);
+    });
+
+    const cards = gpus.map(function (g) {
+      return { index: g.index, name: g.name, total: g.memoryTotalMb, used: g.memoryUsedMb, util: g.utilization, apps: byGpu.get(g.index) || [] };
+    });
+    if (!cards.length) {
+      Array.from(byGpu.keys()).sort().forEach(function (k) {
+        cards.push({ index: k, name: k < 0 ? '未归属显卡' : 'GPU ' + k, total: 0, used: 0, util: 0, apps: byGpu.get(k) });
+      });
+    }
+    if (byGpu.has(-1) && cards.length && !cards.some(function (c) { return c.index === -1; })) {
+      cards.push({ index: -1, name: '未归属显卡', total: 0, used: 0, util: 0, apps: byGpu.get(-1) });
+    }
+    if (!cards.length) {
+      $('gpuProcList').innerHTML = '<span class="empty">未检测到 NVIDIA GPU，或驱动未返回 GPU 进程明细。CPU、内存、磁盘与普通进程仍为真实读数。</span>';
+      return;
+    }
+
+    const palette = ['var(--teal)', 'var(--purple)', 'var(--amber)', 'var(--pink)', 'var(--accent)'];
+    $('gpuProcList').innerHTML = cards.map(function (c) {
+      const color = c.index < 0 ? 'var(--dim)' : palette[c.index % palette.length];
+      const pct = c.total ? clamp(c.used / c.total * 100, 0, 100) : 0;
+      const shown = c.apps.slice(0, 6);
+      let rows;
+      if (!c.apps.length) {
+        rows = '<tr><td colspan="4"><span class="gpc-empty">该卡当前没有运行中的 GPU 进程</span></td></tr>';
+      } else {
+        rows = shown.map(function (a) {
+          const share = c.total ? clamp(a.usedMemoryMb / c.total * 100, 0, 100) : 0;
+          const mem = a.memoryKnown
+            ? '<span class="mini-bar"><i style="width:' + fmt(share, 1) + '%"></i></span>' + fmt(a.usedMemoryMb / 1024, 1) + ' G'
+            : '—';
+          return '<tr><td class="name" title="' + esc(a.fullName || a.name) + '">' + esc(a.name) + '</td>' +
+            '<td class="num">' + a.pid + '</td>' +
+            '<td>' + kindTag(a.kind) + '</td>' +
+            '<td class="num">' + mem + '</td></tr>';
+        }).join('');
+      }
+      const unknown = c.apps.length > 0 && c.apps.every(function (a) { return !a.memoryKnown; });
+      const foot = [];
+      if (unknown) { foot.push('驱动未报告进程级显存（Windows WDDM 常见），仅列出进程名与 PID'); }
+      if (c.apps.length > shown.length) { foot.push('还有 ' + (c.apps.length - shown.length) + ' 个进程未显示'); }
+      return '<div class="gpc" style="--c:' + color + '">' +
+        '<div class="gpc-head"><span class="gpc-id">' + (c.index < 0 ? '未归属' : 'GPU ' + c.index) + '</span>' +
+        '<span class="gpc-model" title="' + esc(c.name) + '">' + esc(c.name) + '</span>' +
+        '<span class="gpc-badge">' + c.apps.length + ' 个进程</span></div>' +
+        '<div class="gpc-meta"><span>显存 ' + fmt(c.used / 1024, 1) + ' / ' + fmt(c.total / 1024, 1) + ' GB</span>' +
+        '<span>利用率 ' + fmt(c.util, 0) + '%</span></div>' +
+        '<div class="bar gpc-bar"><i style="width:' + fmt(pct, 1) + '%"></i></div>' +
+        '<table><thead><tr><th>进程</th><th class="num">PID</th><th>类型</th><th class="num">显存</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody></table>' +
+        (foot.length ? '<div class="gpc-foot">' + foot.join(' · ') + '</div>' : '') +
+        '</div>';
+    }).join('');
+  }
+
+  function drawProcesses(list) {
+    const items = list || [];
+    $('procCount').textContent = 'Top ' + items.length;
+    if (!items.length) {
+      $('procBody').innerHTML = '<tr><td colspan="6"><span class="empty">暂未取到进程数据</span></td></tr>';
+      return;
+    }
+    const sorted = items.slice().sort(function (a, b) {
+      return procSortKey === 'gpu' ? (b.gpuMemoryMb || 0) - (a.gpuMemoryMb || 0) : (b.cpu || 0) - (a.cpu || 0);
+    });
+    $('procBody').innerHTML = sorted.map(function (p) {
+      const gpuLabel = (typeof p.gpuIndex === 'number' && p.gpuIndex >= 0) ? 'GPU ' + p.gpuIndex : '—';
+      return '<tr><td class="name" title="' + esc(p.name) + '">' + esc(p.name) + '</td>' +
+        '<td class="num">' + p.pid + '</td>' +
+        '<td class="num">' + gpuLabel + '</td>' +
+        '<td class="num"><span class="mini-bar"><i style="width:' + fmt(clamp(p.cpu, 0, 100), 0) + '%"></i></span>' + fmt(p.cpu, 1) + '%</td>' +
+        '<td class="num">' + fmt(p.memoryMb / 1024, 2) + ' G</td>' +
+        '<td class="num">' + (p.gpuMemoryMb ? fmt(p.gpuMemoryMb / 1024, 1) + ' G' : '—') + '</td></tr>';
+    }).join('');
+  }
+
+  function renderInfo(info, s) {
+    const set = function (id, value) {
+      const el = $(id);
+      const text = value || '—';
+      el.textContent = text;
+      el.title = text;
+      return el;
+    };
+    const gpuNames = (s.gpus || []).map(function (g) { return g.name; });
+    const up = info ? (info.uptimeSeconds || s.uptimeSeconds || 0) : 0;
+    const days = Math.floor(up / 86400);
+    const hours = Math.floor((up % 86400) / 3600);
+    set('cfgTarget', info ? (info.target || (info.source === 'local' ? '本机（IDE 所在机器）' : '—')) : '—');
+    set('cfgHostname', info && info.hostname);
+    set('cfgUptime', up ? days + ' 天 ' + hours + ' 小时' : '—');
+    set('cfgOs', info && info.os);
+    set('cfgKernel', info && info.kernel);
+    set('cfgArch', info && info.arch);
+    set('cfgCpu', info && info.cpuModel);
+    set('cfgCores', info && info.cores ? info.cores + ' 逻辑核' : ((s.cpuPerCore || []).length ? s.cpuPerCore.length + ' 逻辑核' : '—'));
+    set('cfgMemory', s.memoryTotalMb ? fmt(s.memoryTotalMb / 1024, 1) + ' GB' : '—');
+    set('cfgDisk', s.diskTotalGb ? fmt(s.diskTotalGb, 0) + ' GB' : '—');
+    set('cfgGpu', gpuNames.length ? gpuNames.join(' / ') : '未检测到 NVIDIA GPU');
+    const status = set('cfgStatus', info && (info.error ? '采集异常 · 见上方提示' : info.status));
+    status.className = 'info-val ' + (info && info.error ? 'bad' : (info && info.source !== 'demo' ? 'ok' : ''));
+    $('cfgRemote').textContent = !info ? '等待数据…'
+      : (info.remoteName ? 'IDE 远程会话 · ' + info.remoteName
+        : (info.source === 'ssh' ? 'OpenSSH 远程采集 · 凭据来自本地 SSH 配置'
+          : (info.source === 'local' ? '本机采集' : '演示配置')));
+  }
+
+  function render(p) {
+    const s = p.snapshot;
+    const gpus = s.gpus || [];
+    const hist = p.history || [];
+    const isDemo = p.dataSource === 'demo';
+    const isSsh = p.dataSource === 'ssh';
+    const info = p.serverInfo || null;
+    const cores = (s.cpuPerCore || []).length || 8;
+    intervalMs = p.intervalMs || intervalMs;
+    paused = !!p.paused;
+
+    $('hostName').textContent = p.host || s.host;
+    const label = $('sourceLabel');
+    label.textContent = isDemo ? '演示数据' : (isSsh ? 'SSH · ' + ((info && info.target) || p.host) : '本机实测');
+    label.className = 'pill ' + (isDemo ? 'src-demo' : (isSsh ? 'src-ssh' : 'src-live'));
+    $('demoBanner').classList.toggle('show', isDemo);
+    const err = !isDemo && info && info.error;
+    $('errBanner').classList.toggle('show', !!err);
+    if (err) { $('errText').textContent = info.error; }
+    $('sourceBtnText').textContent = isDemo ? '切换数据源' : '数据源';
+    $('liveLabel').textContent = paused ? '已暂停' : '实时';
+    $('liveDot').style.background = paused ? 'var(--amber)' : 'var(--teal)';
+    $('pauseText').textContent = paused ? '继续' : '暂停';
+    $('interval').value = String(intervalMs);
+    $('intervalLabel').textContent = (intervalMs / 1000) + 's';
+    $('updatedAt').textContent = new Date(s.timestamp).toLocaleTimeString('zh-CN', { hour12: false });
+
+    const memPct = s.memoryTotalMb ? s.memoryUsedMb / s.memoryTotalMb * 100 : 0;
+    const gpuUsed = gpus.reduce(function (a, g) { return a + g.memoryUsedMb; }, 0);
+    const gpuTotal = gpus.reduce(function (a, g) { return a + g.memoryTotalMb; }, 0);
+    const gpuPct = gpuTotal ? gpuUsed / gpuTotal * 100 : 0;
+    const avgUtil = gpus.length ? gpus.reduce(function (a, g) { return a + g.utilization; }, 0) / gpus.length : 0;
+    const maxUtil = gpus.length ? Math.max.apply(null, gpus.map(function (g) { return g.utilization; })) : 0;
+    const maxTemp = gpus.length ? Math.max.apply(null, gpus.map(function (g) { return g.temperatureC; })) : 0;
+
+    setCard('cpu', fmt(s.cpu, 1), '%', '负载 ' + fmt(s.cpu * cores / 100, 2) + ' / ' + cores + ' 核 · 峰值 ' + fmt(Math.max.apply(null, hist.map(function (h) { return h.cpu; }).concat([s.cpu])), 0) + '%', s.cpu, hist.map(function (h) { return h.cpu; }));
+    setCard('mem', fmt(s.memoryUsedMb / 1024, 1), 'GB', '共 ' + fmt(s.memoryTotalMb / 1024, 0) + ' GB · 已用 ' + fmt(memPct, 1) + '%', memPct, hist.map(function (h) { return h.memory; }));
+    setCard('gpuMem', fmt(gpuUsed / 1024, 1), 'GB', '共 ' + fmt(gpuTotal / 1024, 0) + ' GB · ' + gpus.length + ' 张卡', gpuPct, hist.map(function (h) { return h.gpuMemory; }));
+    setCard('gpuUtil', fmt(avgUtil, 0), '%', '峰值 ' + fmt(maxUtil, 0) + '% · 最高温度 ' + fmt(maxTemp, 0) + '°C', avgUtil, hist.map(function (h) { return h.gpuUtil; }));
+    $('cpuBadge').textContent = cores + ' 核';
+    $('memBadge').textContent = fmt(s.memoryTotalMb / 1024, 0) + ' GB';
+    $('gpuMemBadge').textContent = gpus.length + ' 卡';
+
+    drawTrend(hist);
+    drawGpus(gpus);
+    drawGpuProcesses(gpus, s.gpuProcesses || []);
+    lastProcList = s.processes || [];
+    drawProcesses(lastProcList);
+    renderInfo(info, s);
+
+    const diskPct = s.diskTotalGb ? s.diskUsedGb / s.diskTotalGb * 100 : 0;
+    $('diskValue').textContent = fmt(s.diskUsedGb, 0) + ' / ' + fmt(s.diskTotalGb, 0) + ' GB';
+    $('diskBar').style.width = fmt(clamp(diskPct, 0, 100), 1) + '%';
+    $('diskRead').textContent = fmt(s.diskReadMbps / 8, 1) + ' MB/s';
+    $('diskWrite').textContent = fmt(s.diskWriteMbps / 8, 1) + ' MB/s';
+    $('netRx').textContent = fmt(s.netRxMbps / 8, 1);
+    $('netTx').textContent = fmt(s.netTxMbps / 8, 1);
+
+    const days = Math.floor((s.uptimeSeconds || 0) / 86400);
+    const hours = Math.floor(((s.uptimeSeconds || 0) % 86400) / 3600);
+    $('uptime').textContent = days + ' 天 ' + hours + ' 小时';
+    const isWin = p.platform === 'win32';
+    $('footerNote').textContent = isDemo
+      ? '演示数据 · 仅用于界面预览，非真实读数'
+      : (isSsh
+        ? 'SSH 远程采集 · ' + ((info && info.target) || p.host) + ' · 凭据来自本地 SSH 配置'
+        : (info && info.remoteName
+          ? 'IDE 远程会话 ' + info.remoteName + ' · 采集发生在远端扩展宿主'
+          : (isWin ? '本机实时采集 · WDDM 不提供进程级显存，GPU 进程名单仍可见' : '本机实时采集 · ' + (p.platform || '当前系统') + ' /proc 与系统命令')));
+  }
+
+  function demoTick() { if (!paused) { render(demoPayload()); } }
+
+  for (let i = 0; i < 60; i++) { demoPayload(); }
+  render(demoPayload());
+  demoTimer = setInterval(demoTick, intervalMs);
+
+  window.addEventListener('message', function (event) {
+    const msg = event.data;
+    if (!msg || msg.type !== 'update') { return; }
+    if (demoTimer) { clearInterval(demoTimer); demoTimer = null; }
+    render(msg.payload);
+  });
+
+  $('sourceBtn').addEventListener('click', function () { post({ type: 'switchDataSource' }); });
+  $('pauseBtn').addEventListener('click', function () {
+    if (api) { post({ type: 'togglePause' }); }
+    else { paused = !paused; render(demoPayload()); }
+  });
+  $('refreshBtn').addEventListener('click', function () {
+    if (api) { post({ type: 'refresh' }); }
+    else { render(demoPayload()); }
+  });
+  $('interval').addEventListener('change', function (event) {
+    intervalMs = Number(event.target.value);
+    $('intervalLabel').textContent = (intervalMs / 1000) + 's';
+    if (api) { post({ type: 'setInterval', value: intervalMs }); }
+    else if (demoTimer) { clearInterval(demoTimer); demoTimer = setInterval(demoTick, intervalMs); }
+  });
+  $('procSort').addEventListener('change', function (event) {
+    procSortKey = event.target.value;
+    drawProcesses(lastProcList);
+  });
+
+  // 独立浏览器预览页没有扩展宿主，隐藏只在本插件里生效的按钮。
+  if (!api) { $('sourceBtn').style.display = 'none'; }
+
+  post({ type: 'ready' });
+})();
+</script>
+</body>
+</html>
