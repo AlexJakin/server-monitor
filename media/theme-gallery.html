@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Server Monitor · 显示风格总览</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 34px 24px 60px; color: #e8ecf6;
+    background: radial-gradient(900px 480px at 10% -12%, rgba(108,140,255,.16), transparent 70%),
+                radial-gradient(760px 420px at 92% 0%, rgba(255,92,205,.10), transparent 70%), #0a0e18;
+    font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+  h1 { margin: 0 0 6px; font-size: 25px; letter-spacing: .3px; }
+  .lede { margin: 0 0 18px; color: #98a6c2; font-size: 13.5px; }
+  .tip {
+    display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center;
+    padding: 12px 16px; margin-bottom: 26px; border: 1px solid rgba(255,255,255,.10);
+    border-radius: 12px; background: rgba(255,255,255,.035); font-size: 12.5px; color: #aab6cf;
+  }
+  .tip b { color: #e8ecf6; font-weight: 600; }
+  code { font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; color: #8fb4ff; }
+  .gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+  .card {
+    border: 1px solid rgba(255,255,255,.09); border-radius: 14px; overflow: hidden;
+    background: rgba(255,255,255,.025); box-shadow: 0 12px 32px rgba(0,0,0,.28);
+    transition: transform .2s, border-color .2s;
+  }
+  .card:hover { transform: translateY(-3px); border-color: var(--c); }
+  .meta { display: flex; align-items: baseline; gap: 9px; padding: 13px 16px 8px; }
+  .swatch { width: 10px; height: 10px; border-radius: 50%; background: var(--c); box-shadow: 0 0 12px var(--c); flex: none; }
+  .meta h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .meta .id { font: 11.5px ui-monospace, SFMono-Regular, Consolas, monospace; color: #7888a6; }
+  .meta a { margin-left: auto; font-size: 11.5px; color: #8fb4ff; text-decoration: none; white-space: nowrap; }
+  .meta a:hover { text-decoration: underline; }
+  .desc { padding: 0 16px 11px; margin: 0; font-size: 12px; color: #94a1bb; min-height: 30px; }
+  .shot { position: relative; height: 330px; overflow: hidden; background: #0b101c; border-top: 1px solid rgba(255,255,255,.07); }
+  .shot iframe { position: absolute; top: 0; left: 0; width: 1200px; height: 2600px; border: 0; transform: scale(.5); transform-origin: top left; }
+  .tags { display: flex; gap: 7px; flex-wrap: wrap; padding: 11px 16px 14px; }
+  .tag { font-size: 10.5px; color: #9aa8c4; border: 1px solid rgba(255,255,255,.12); border-radius: 6px; padding: 1px 8px; }
+  .tag.fixed { color: #ffc0e4; border-color: rgba(255,92,205,.32); }
+  footer { margin-top: 30px; font-size: 11.5px; color: #6f7e9c; text-align: center; }
+  @media (max-width: 900px) { .gallery { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Server Monitor · 显示风格总览</h1>
+  <p class="lede">7 套可即时切换的仪表盘皮肤。下面每张预览都是同一份 <code>dashboard.html</code>，只改 <code>data-theme</code>；显示为演示数据。</p>
+  <div class="tip">
+    <span><b>怎么用</b></span>
+    <span>面板右上角「显示风格」下拉框</span>
+    <span>命令面板 <code>Server Monitor: 切换显示风格</code></span>
+    <span>设置项 <code>serverMonitor.theme</code></span>
+    <span>简介页 <code>media/theme-gallery.html</code> 可直接用浏览器打开</span>
+  </div>
+
+  <div class="gallery">
+    <article class="card" style="--c:#6c8cff">
+      <div class="meta"><span class="swatch"></span><h2>经典</h2><span class="id">classic</span><a href="dashboard.html?theme=classic">单独打开 ↗</a></div>
+      <p class="desc">最初的蓝紫仪表盘，深浅配色跟随 IDE 主题自动切换；圆角卡片与柔和投影。</p>
+      <div class="shot"><iframe src="dashboard.html?theme=classic" loading="lazy" title="经典风格预览"></iframe></div>
+      <div class="tags"><span class="tag">默认</span><span class="tag">跟随 IDE 明暗</span><span class="tag">蓝紫 / 多色指标</span></div>
+    </article>
+
+    <article class="card" style="--c:#2563eb">
+      <div class="meta"><span class="swatch"></span><h2>精简</h2><span class="id">minimal</span><a href="dashboard.html?theme=minimal">单独打开 ↗</a></div>
+      <p class="desc">纯白底、发丝分隔线、无投影；隐藏迷你趋势图与角标，字号收紧、留白更多。</p>
+      <div class="shot"><iframe src="dashboard.html?theme=minimal" loading="lazy" title="精简风格预览"></iframe></div>
+      <div class="tags"><span class="tag">跟随 IDE 明暗</span><span class="tag">低密度</span><span class="tag">单色强调</span></div>
+    </article>
+
+    <article class="card" style="--c:#4ea8de">
+      <div class="meta"><span class="swatch"></span><h2>专业</h2><span class="id">professional</span><a href="dashboard.html?theme=professional">单独打开 ↗</a></div>
+      <p class="desc">运维终端风：全站等宽字体、方正边角、蓝色工程网格、高密度信息排布。</p>
+      <div class="shot"><iframe src="dashboard.html?theme=professional" loading="lazy" title="专业风格预览"></iframe></div>
+      <div class="tags"><span class="tag">跟随 IDE 明暗</span><span class="tag">等宽字体</span><span class="tag">工程网格</span></div>
+    </article>
+
+    <article class="card" style="--c:#c4846f">
+      <div class="meta"><span class="swatch"></span><h2>温和</h2><span class="id">gentle</span><a href="dashboard.html?theme=gentle">单独打开 ↗</a></div>
+      <p class="desc">奶油暖白、陶土与莫兰迪低饱和配色，大圆角和柔和阴影，长时间盯屏更轻松。</p>
+      <div class="shot"><iframe src="dashboard.html?theme=gentle" loading="lazy" title="温和风格预览"></iframe></div>
+      <div class="tags"><span class="tag">跟随 IDE 明暗</span><span class="tag">低饱和</span><span class="tag">大圆角</span></div>
+    </article>
+
+    <article class="card" style="--c:#5b8a47">
+      <div class="meta"><span class="swatch"></span><h2>自然</h2><span class="id">nature</span><a href="dashboard.html?theme=nature">单独打开 ↗</a></div>
+      <p class="desc">米绿纸张颗粒、叶绿与大地色；圆形品牌标记与叶形细节，圆润有机。</p>
+      <div class="shot"><iframe src="dashboard.html?theme=nature" loading="lazy" title="自然风格预览"></iframe></div>
+      <div class="tags"><span class="tag">跟随 IDE 明暗</span><span class="tag">纸感纹理</span><span class="tag">大地色</span></div>
+    </article>
+
+    <article class="card" style="--c:#38bdf8">
+      <div class="meta"><span class="swatch"></span><h2>科技</h2><span class="id">tech</span><a href="dashboard.html?theme=tech">单独打开 ↗</a></div>
+      <p class="desc">深靛蓝底 + 青色霓虹：发光数值与进度条、蓝色工程网格、半透明玻璃卡片。</p>
+      <div class="shot"><iframe src="dashboard.html?theme=tech" loading="lazy" title="科技风格预览"></iframe></div>
+      <div class="tags"><span class="tag fixed">固定深色</span><span class="tag">霓虹发光</span><span class="tag">玻璃拟态</span></div>
+    </article>
+
+    <article class="card" style="--c:#ff5ccd">
+      <div class="meta"><span class="swatch"></span><h2>霓虹复古</h2><span class="id">neon-retro</span><a href="dashboard.html?theme=neon-retro">单独打开 ↗</a></div>
+      <p class="desc">80–90 年代复古未来主义：粉紫渐变、透视地平线网格、CRT 扫描线、标题故障艺术与霓虹辉光。</p>
+      <div class="shot"><iframe src="dashboard.html?theme=neon-retro" loading="lazy" title="霓虹复古风格预览"></iframe></div>
+      <div class="tags"><span class="tag fixed">固定深色</span><span class="tag">粉紫渐变</span><span class="tag">故障艺术</span><span class="tag">扫描线</span></div>
+    </article>
+
+    <article class="card" style="--c:#a98bff">
+      <div class="meta"><span class="swatch"></span><h2>经典 · 浅色</h2><span class="id">classic + light</span><a href="dashboard.html?theme=classic&amp;scheme=light">单独打开 ↗</a></div>
+      <p class="desc">同一套经典风格在浅色 IDE 下的样子。精简 / 专业 / 温和 / 自然同样会跟随 IDE 明暗切换。</p>
+      <div class="shot"><iframe src="dashboard.html?theme=classic&amp;scheme=light" loading="lazy" title="经典浅色风格预览"></iframe></div>
+      <div class="tags"><span class="tag">IDE 浅色主题</span><span class="tag">自动切换</span></div>
+    </article>
+  </div>
+
+  <footer>预览使用演示数据 · 主题定义位于 media/dashboard.html 内联样式 · 遵循系统「减少动态效果」设置</footer>
+</div>
+</body>
+</html>

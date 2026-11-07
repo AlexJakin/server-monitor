@@ -2,7 +2,7 @@
   "name": "server-monitor",
   "displayName": "Server Monitor",
   "description": "实时查看本机或通过 OpenSSH 远程 Linux 服务器的 CPU、内存、每张显卡的运行进程与显存等配置与使用情况的仪表盘",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "publisher": "your-publisher-id",
   "license": "MIT",
   "icon": "icon.png",
@@ -39,7 +39,8 @@
     "onCommand:serverMonitor.switchDataSource",
     "onCommand:serverMonitor.connectSsh",
     "onCommand:serverMonitor.followTerminalSsh",
-    "onCommand:serverMonitor.showEnvironment"
+    "onCommand:serverMonitor.showEnvironment",
+    "onCommand:serverMonitor.chooseTheme"
   ],
   "contributes": {
     "commands": [
@@ -70,11 +71,38 @@
       {
         "command": "serverMonitor.showEnvironment",
         "title": "Server Monitor: 显示宿主环境信息"
+      },
+      {
+        "command": "serverMonitor.chooseTheme",
+        "title": "Server Monitor: 切换显示风格"
       }
     ],
     "configuration": {
       "title": "Server Monitor",
       "properties": {
+        "serverMonitor.theme": {
+          "type": "string",
+          "enum": [
+            "classic",
+            "minimal",
+            "professional",
+            "gentle",
+            "nature",
+            "tech",
+            "neon-retro"
+          ],
+          "enumDescriptions": [
+            "经典：蓝紫仪表盘，跟随 IDE 深浅主题",
+            "精简：纯白细线，隐藏迷你趋势图",
+            "专业：等宽字体 + 工程网格，高密度",
+            "温和：奶油暖白 + 低饱和莫兰迪色",
+            "自然：米绿纸感 + 叶绿大地色",
+            "科技：深靛蓝 + 青色霓虹发光（固定深色）",
+            "霓虹复古：粉紫渐变 + 扫描线 + 故障艺术（固定深色）"
+          ],
+          "default": "classic",
+          "description": "仪表盘显示风格。也可在面板右上角下拉框或「切换显示风格」命令中即时切换。"
+        },
         "serverMonitor.host": {
           "type": "string",
           "default": "",

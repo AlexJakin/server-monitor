@@ -5,6 +5,16 @@ test/**
 node_modules/**
 .gitignore
 .vscodeignore
+README.en.md
+media/theme-gallery.html
+media/screenshots/theme-classic.png
+media/screenshots/theme-classic-light.png
+media/screenshots/theme-minimal.png
+media/screenshots/theme-professional.png
+media/screenshots/theme-gentle.png
+media/screenshots/theme-nature.png
+media/screenshots/theme-tech.png
+media/screenshots/theme-neon-retro.png
 tsconfig.json
 **/*.map
 **/*.ts

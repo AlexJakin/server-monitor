@@ -1,6 +1,6 @@
 import * as os from 'os';
 import * as vscode from 'vscode';
-import { DashboardPanel, IncomingMessage } from './panel';
+import { DashboardPanel, IncomingMessage, ThemeId, isThemeId } from './panel';
 import {
   DashboardPayload,
   DemoSource,
@@ -25,6 +25,7 @@ interface Settings {
   sshArgs: string;
   sshTimeoutMs: number;
   sshAutoDetect: boolean;
+  theme: ThemeId;
 }
 
 interface DataSourcePick extends vscode.QuickPickItem {
@@ -34,6 +35,21 @@ interface DataSourcePick extends vscode.QuickPickItem {
 interface HostPick extends vscode.QuickPickItem {
   value: string;
 }
+
+interface ThemePick extends vscode.QuickPickItem {
+  value: ThemeId;
+}
+
+/** 显示风格的中文名与说明；值与 Webview 的 data-theme、配置 enum 一一对应。 */
+const THEME_PICKS: { value: ThemeId; label: string; detail: string }[] = [
+  { value: 'classic', label: '经典 Classic', detail: '最初的蓝紫仪表盘，跟随 IDE 深浅主题自动切换' },
+  { value: 'minimal', label: '精简 Minimal', detail: '纯白底、细分隔线、隐藏迷你趋势图与徽标，留白更多' },
+  { value: 'professional', label: '专业 Professional', detail: '等宽字体、方正边角、工程网格，运维终端式高密度布局' },
+  { value: 'gentle', label: '温和 Gentle', detail: '奶油暖白、陶土与莫兰迪低饱和配色、大圆角柔和阴影' },
+  { value: 'nature', label: '自然 Nature', detail: '米绿纸感、叶绿与大地色，圆润有机' },
+  { value: 'tech', label: '科技 Tech', detail: '深靛蓝底、青色霓虹、发光数值与蓝色工程网格（固定深色）' },
+  { value: 'neon-retro', label: '霓虹复古 Neon Retro', detail: '80–90 年代复古未来主义：粉紫渐变、透视地平线网格、CRT 扫描线与故障艺术' },
+];
 
 const EMPTY_SNAPSHOT: MetricsSnapshot = {
   timestamp: 0,
@@ -76,6 +92,7 @@ let lastDetectAt = 0;
 function settings(): Settings {
   const config = vscode.workspace.getConfiguration('serverMonitor');
   const mode = config.get<string>('dataSource', 'local');
+  const rawTheme = config.get<string>('theme', 'classic');
   return {
     host: config.get<string>('host', ''),
     intervalMs: Math.max(500, config.get<number>('refreshIntervalMs', 2000)),
@@ -85,6 +102,7 @@ function settings(): Settings {
     sshArgs: config.get<string>('sshArgs', '').trim(),
     sshTimeoutMs: Math.max(3000, config.get<number>('sshTimeoutMs', 12000)),
     sshAutoDetect: config.get<boolean>('sshAutoDetect', true),
+    theme: isThemeId(rawTheme) ? rawTheme : 'classic',
   };
 }
 
@@ -233,6 +251,7 @@ function collectAndPush(): void {
     paused,
     platform: os.platform(),
     serverInfo: buildServerInfo(config, snapshot),
+    theme: config.theme,
   };
   DashboardPanel.post(payload);
 }
@@ -316,6 +335,25 @@ async function connectSsh(): Promise<boolean> {
   collectAndPush();
   outputChannel?.appendLine(`SSH 目标已设为 ${target}`);
   return true;
+}
+
+/** 命令面板切换风格；面板右上角的下拉框写入同一项配置。 */
+async function chooseTheme(): Promise<void> {
+  const current = settings().theme;
+  const picks: ThemePick[] = THEME_PICKS.map((item) => ({
+    label: item.value === current ? `$(check) ${item.label}` : item.label,
+    description: item.value === current ? '当前风格' : item.value,
+    detail: item.detail,
+    value: item.value,
+  }));
+  const pick = await vscode.window.showQuickPick(picks, {
+    placeHolder: '选择仪表盘显示风格（也可在面板右上角下拉框切换）',
+  });
+  if (!pick) {
+    return;
+  }
+  await setConfig('theme', pick.value);
+  collectAndPush();
 }
 
 async function chooseDataSource(): Promise<void> {
@@ -455,11 +493,16 @@ export function activate(context: vscode.ExtensionContext): void {
       case 'switchDataSource':
         void chooseDataSource();
         break;
+      case 'setTheme':
+        if (typeof message.value === 'string' && isThemeId(message.value)) {
+          void setConfig('theme', message.value);
+        }
+        break;
     }
   };
 
   const openDashboard = vscode.commands.registerCommand('serverMonitor.openDashboard', () => {
-    const created = DashboardPanel.show(context.extensionUri, handleMessage);
+    const created = DashboardPanel.show(context.extensionUri, handleMessage, settings().theme);
     if (!created) {
       collectAndPush();
     }
@@ -474,6 +517,9 @@ export function activate(context: vscode.ExtensionContext): void {
   const refresh = vscode.commands.registerCommand('serverMonitor.refresh', () => collectAndPush());
   const switchSource = vscode.commands.registerCommand('serverMonitor.switchDataSource', () =>
     chooseDataSource(),
+  );
+  const chooseThemeCmd = vscode.commands.registerCommand('serverMonitor.chooseTheme', () =>
+    chooseTheme(),
   );
   const connect = vscode.commands.registerCommand('serverMonitor.connectSsh', () => connectSsh());
   const followTerminal = vscode.commands.registerCommand('serverMonitor.followTerminalSsh', async () => {
@@ -500,6 +546,7 @@ export function activate(context: vscode.ExtensionContext): void {
       `extension id:   ${context.extension.id}`,
       '--- 数据源 ---',
       `dataSource:     ${config.dataSource}`,
+      `display theme:  ${config.theme}`,
       `sshHost:        ${config.sshHost || '（未配置）'}`,
       `sshArgs:        ${config.sshArgs || '（无）'}`,
       `autoDetect:     ${config.sshAutoDetect}`,
@@ -531,6 +578,7 @@ export function activate(context: vscode.ExtensionContext): void {
     togglePause,
     refresh,
     switchSource,
+    chooseThemeCmd,
     connect,
     followTerminal,
     showEnvironment,

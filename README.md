@@ -1,5 +1,7 @@
 # Server Monitor
 
+**简体中文** · [English](README.en.md)
+
 Server Monitor 是 VS Code / Trae CN 上的服务器资源监控插件：把 CPU、内存、GPU 显存与每张显卡上运行的进程、磁盘、网络和服务器配置详情集中到一张实时仪表盘里，不用再开终端反复敲 `top`、`nvidia-smi`、`df`。界面是内置 Webview，CSS/JS 全内联、零 CDN、明暗主题自适应、离线可用；一份 TypeScript 源码打成一个 `.vsix`，两端都能装。数据来自本机还是远程服务器，见下表。
 
 | 数据源 | 读到的是谁 |
@@ -8,7 +10,7 @@ Server Monitor 是 VS Code / Trae CN 上的服务器资源监控插件：把 CPU
 | `ssh` | 远程 Linux 服务器，走系统 OpenSSH 采集 |
 | `demo` | 模拟数据，仅用于界面预览 |
 
-当前版本 `0.5.0`。兼容基线：VS Code 1.80 公开 API（`engines.vscode: ^1.80.0`）、纯 TypeScript、无运行时依赖、无原生二进制。
+当前版本 `0.6.0`。兼容基线：VS Code 1.80 公开 API（`engines.vscode: ^1.80.0`）、纯 TypeScript、无运行时依赖、无原生二进制。
 
 ---
 
@@ -26,6 +28,29 @@ Server Monitor 是 VS Code / Trae CN 上的服务器资源监控插件：把 CPU
 </details>
 
 从上到下依次为 4 张指标卡、服务器配置详情、资源趋势、GPU 明细、每张显卡的运行进程、存储与网络和进程排行。
+
+### 显示风格
+
+内置 7 套风格，在面板右上角下拉框即时切换，不用重载；也可以用命令面板 `Server Monitor: 切换显示风格` 或设置项 `serverMonitor.theme`。风格只改 CSS，不影响数据采集与刷新。
+
+<details>
+<summary>7 套风格并排预览（点击展开）</summary>
+
+![Server Monitor 七套显示风格总览](media/screenshots/theme-gallery.png)
+
+</details>
+
+| 风格 | `serverMonitor.theme` | 特点 |
+| --- | --- | --- |
+| 经典 | `classic`（默认） | 蓝紫仪表盘，跟随 IDE 深浅主题 |
+| 精简 | `minimal` | 纯白细线、无投影，隐藏迷你趋势图与角标，留白更多 |
+| 专业 | `professional` | 全站等宽字体、方正边角、工程网格，运维终端式高密度 |
+| 温和 | `gentle` | 奶油暖白、陶土与莫兰迪低饱和配色，大圆角柔和阴影 |
+| 自然 | `nature` | 米绿纸感、叶绿与大地色，圆润有机 |
+| 科技 | `tech` | 深靛蓝 + 青色霓虹发光、玻璃卡片、蓝色工程网格 |
+| 霓虹复古 | `neon-retro` | 80–90 年代复古未来主义：粉紫渐变、透视地平线网格、CRT 扫描线、标题故障艺术与霓虹辉光 |
+
+前 5 套跟随 IDE 明暗自动切换，`tech` 与 `neon-retro` 为固定深色。独立浏览器打开 `media/theme-gallery.html` 可并排预览全部风格，也可用 `media/dashboard.html?theme=tech` 单独查看某套（加 `&scheme=light` 可复现浅色 IDE）；预览页使用演示数据。动效遵循系统「减少动态效果」设置。
 
 ---
 
@@ -66,11 +91,13 @@ Server Monitor 是 VS Code / Trae CN 上的服务器资源监控插件：把 CPU
 | `Server Monitor: 连接远程服务器（SSH）` | 从 `~/.ssh/config` 别名、检测到的会话或手工输入里选目标 |
 | `Server Monitor: 跟随当前终端的 SSH 会话` | 立即检测集成终端里的 ssh 进程并切换 |
 | `Server Monitor: 显示宿主环境信息` | 输出数据源、SSH 状态、服务器配置与采集状态，用于排查 |
+| `Server Monitor: 切换显示风格` | 在 7 套仪表盘风格中挑选，效果与面板右上角下拉框一致 |
 
 配置在设置里搜 `serverMonitor`：
 
 | 配置项 | 默认值 | 说明 |
 | --- | --- | --- |
+| `serverMonitor.theme` | `classic` | 显示风格：`classic` / `minimal` / `professional` / `gentle` / `nature` / `tech` / `neon-retro` |
 | `serverMonitor.dataSource` | `local` | `local` / `ssh` / `demo` |
 | `serverMonitor.sshHost` | 空 | `user@host` 或 `~/.ssh/config` 别名，**不要写密码** |
 | `serverMonitor.sshArgs` | 空 | 附加 ssh 参数，如 `-p 2222 -i C:/keys/id_ed25519`；含空格路径请改用 config 别名 |
@@ -80,7 +107,7 @@ Server Monitor 是 VS Code / Trae CN 上的服务器资源监控插件：把 CPU
 | `serverMonitor.refreshIntervalMs` | `2000` | 采样间隔，可选 `1000` / `2000` / `5000` / `10000`（SSH 内部最小 1500 ms） |
 | `serverMonitor.historyLength` | `60` | 趋势图保留的采样点数 |
 
-面板上还可直接暂停 / 刷新 / 切采样间隔 / 切数据源。
+面板上还可直接暂停 / 刷新 / 切采样间隔 / 切数据源 / 切显示风格。
 
 ---
 

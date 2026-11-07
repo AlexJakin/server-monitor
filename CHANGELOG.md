@@ -1,5 +1,15 @@
 # Change Log
 
+## [0.6.0] - 2026-11-07
+
+- **7 套显示风格**：`classic` / `minimal` / `professional` / `gentle` / `nature` / `tech` / `neon-retro`。仪表盘右上角新增即时切换下拉框，并新增 `Server Monitor: 切换显示风格` 命令与 `serverMonitor.theme` 配置；三者写入同一份全局配置，改动后无需重载面板。
+- 样式层重构为完整 CSS 变量体系：散落在样式表与 4 张指标卡内联样式里的硬编码颜色全部改为 `--soft-*` / `--brand-*` 等主题变量；新增形状令牌（圆角、内边距、字号、字体、卡片顶条高度）与特效令牌（网格层、扫描线、透视地平线、发光），换肤不再只是换色，也能改变密度与气质。
+- `classic` / `minimal` / `professional` / `gentle` / `nature` 保留 IDE 明暗自适应；`tech` / `neon-retro` 为固定深色。`neon-retro` 含粉紫渐变、CRT 扫描线、透视地平线网格、常驻色差切片与每 7 秒一次的标题故障抖动，遵循 `prefers-reduced-motion`。
+- Webview 首帧由 `DashboardPanel.buildHtml()` 注入 `data-theme`，避免先闪一下经典配色；后续通过 `DashboardPayload.theme` 同步下拉框。独立浏览器预览支持 `?theme=` / `?scheme=` 与 localStorage 记忆。
+- 新增 `media/theme-gallery.html` 主题总览页（8 张并排 iframe 预览，含经典浅色）与 `media/screenshots/theme-*.png` 渲染截图；总览页通过 `.vscodeignore` 排除，不进 vsix。
+- `显示宿主环境信息` 增加 `display theme` 输出；`media/dashboard.html` 仍是 CSS/JS 全内联、零 CDN、零新增 npm 依赖。
+- 验证：`npm run typecheck` / `npm test` / `npm run package` 通过；7 套主题与经典浅色均由无头 Chrome 实际渲染截图核对，无布局错乱。
+
 ## [0.5.0] - 2026-11-06
 
 - **每张显卡的运行进程明细**：新增按物理卡分组的卡片，显示型号、显存占用条、利用率、进程数，并逐条列出进程名、PID、类型（计算 / 图形 / 计算+图形）、显存与占整卡比例；空卡与超出 6 条的剩余数量都有明确提示。

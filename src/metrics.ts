@@ -91,6 +91,8 @@ export interface DashboardPayload {
   /** 插件运行所在主机的平台（os.platform()），用于界面显示对应的采集口径说明。 */
   platform?: string;
   serverInfo?: ServerInfo;
+  /** 当前显示风格 id；面板据此同步右上角下拉框（配置改动也能即时生效）。 */
+  theme?: string;
 }
 
 export interface MetricsSource {

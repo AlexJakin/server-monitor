@@ -4,9 +4,26 @@ import { randomBytes } from 'crypto';
 import * as vscode from 'vscode';
 import { DashboardPayload } from './metrics';
 
+/** 显示风格白名单：扩展配置、命令面板与 Webview 共用同一份，避免拼错导致样式回退。 */
+export const THEME_IDS = [
+  'classic',
+  'minimal',
+  'professional',
+  'gentle',
+  'nature',
+  'tech',
+  'neon-retro',
+] as const;
+
+export type ThemeId = (typeof THEME_IDS)[number];
+
+export function isThemeId(value: string): value is ThemeId {
+  return (THEME_IDS as readonly string[]).includes(value);
+}
+
 export interface IncomingMessage {
-  type: 'ready' | 'togglePause' | 'refresh' | 'setInterval' | 'switchDataSource';
-  value?: number;
+  type: 'ready' | 'togglePause' | 'refresh' | 'setInterval' | 'switchDataSource' | 'setTheme';
+  value?: number | string;
 }
 
 /**
@@ -22,16 +39,18 @@ export class DashboardPanel {
     private readonly panel: vscode.WebviewPanel,
     private readonly extensionUri: vscode.Uri,
     onMessage: (message: IncomingMessage) => void,
+    theme: ThemeId,
   ) {
     this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
     this.panel.webview.onDidReceiveMessage(onMessage, null, this.disposables);
-    this.panel.webview.html = this.buildHtml();
+    this.panel.webview.html = this.buildHtml(theme);
   }
 
   /** 返回是否新建了面板；已存在时只把它切到前台。 */
   static show(
     extensionUri: vscode.Uri,
     onMessage: (message: IncomingMessage) => void,
+    theme: ThemeId,
   ): boolean {
     if (DashboardPanel.current) {
       DashboardPanel.current.panel.reveal(vscode.ViewColumn.One);
@@ -48,7 +67,7 @@ export class DashboardPanel {
         localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'media')],
       },
     );
-    DashboardPanel.current = new DashboardPanel(panel, extensionUri, onMessage);
+    DashboardPanel.current = new DashboardPanel(panel, extensionUri, onMessage, theme);
     return true;
   }
 
@@ -58,10 +77,13 @@ export class DashboardPanel {
     }
   }
 
-  private buildHtml(): string {
+  private buildHtml(theme: ThemeId): string {
     const file = path.join(this.extensionUri.fsPath, 'media', 'dashboard.html');
     let html = fs.readFileSync(file, 'utf8');
     const nonce = randomBytes(16).toString('hex');
+
+    // 首帧就带上主题，避免 Webview 先闪一下经典配色再切换。
+    html = html.replace('<html lang="zh-CN">', `<html lang="zh-CN" data-theme="${theme}">`);
 
     const csp = [
       "default-src 'none'",
